@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
-// Backend URL
+// Backend URL (Railway or local)
 const backendURL =
   import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
 
 export default function Room({ room, alias }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [connected, setConnected] = useState(false);
+
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -19,18 +21,21 @@ export default function Room({ room, alias }) {
   useEffect(() => {
     if (!room || !alias) return;
 
-    // Initialize socket inside useEffect
+    // Initialize socket
     const socket = io(backendURL, {
-      transports: ["polling"],
+      transports: ["polling"], // avoid wss issues on Railway free
       upgrade: true
     });
-
     socketRef.current = socket;
 
-    // Join room
-    socket.emit("joinRoom", { room, alias });
+    // Track connection
+    socket.on("connect", () => {
+      setConnected(true);
+      console.log("Socket connected:", socket.id);
+      socket.emit("joinRoom", { room, alias });
+    });
 
-    // Load old messages
+    // Load previous messages
     socket.on("loadMessages", (msgs) => {
       setMessages(msgs);
       scrollToBottom();
@@ -42,16 +47,17 @@ export default function Room({ room, alias }) {
       scrollToBottom();
     });
 
+    // Disconnect cleanup
     return () => {
       socket.disconnect();
+      setConnected(false);
     };
   }, [room, alias]);
 
   const sendMessage = () => {
-    if (input.trim()) {
-      socketRef.current.emit("sendMessage", { room, alias, text: input });
-      setInput("");
-    }
+    if (!input.trim() || !socketRef.current || !connected) return;
+    socketRef.current.emit("sendMessage", { room, alias, text: input });
+    setInput("");
   };
 
   return (
@@ -75,15 +81,21 @@ export default function Room({ room, alias }) {
         ))}
         <div ref={messagesEndRef} />
       </div>
+
       <div style={{ display: "flex", gap: "8px" }}>
         <input
           style={{ flex: 1, padding: "8px" }}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message"
+          placeholder={connected ? "Type a message" : "Connecting..."}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          disabled={!connected}
         />
-        <button onClick={sendMessage} style={{ padding: "8px 16px" }}>
+        <button
+          onClick={sendMessage}
+          style={{ padding: "8px 16px" }}
+          disabled={!connected || !input.trim()}
+        >
           Send
         </button>
       </div>
