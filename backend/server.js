@@ -55,7 +55,10 @@ io.on("connection", (socket) => {
   });
 });
 
-app.get("/", (req, res) => res.send("Campus Room API is running 🚀"));
+app.get("/", (req, res) => {
+  console.log("ℹ️ Health check endpoint hit");
+  res.status(200).send("Campus Room API is running 🚀");
+});
 
 const PORT = process.env.PORT || 8080;
 
