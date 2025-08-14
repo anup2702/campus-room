@@ -52,7 +52,7 @@ io.on("connection", (socket) => {
 
     // Send old messages in this room
     const oldMessages = await Message.find({ room }).sort({ timestamp: 1 });
-    socket.emit("loadMessages", oldMessages);
+    socket.emit("loadMessages", oldMessages.map(msg => msg.toObject())); // <-- convert to plain objects
   });
 
   // Send message
@@ -63,7 +63,7 @@ io.on("connection", (socket) => {
     await newMsg.save();
 
     // Broadcast to room
-    io.to(room).emit("message", newMsg);
+    io.to(room).emit("message", newMsg.toObject()); // <-- convert to plain object
   });
 
   socket.on("disconnect", () => {
