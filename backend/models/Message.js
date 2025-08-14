@@ -7,4 +7,5 @@ const messageSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now, index: { expires: "24h" } }
 });
 
-export default mongoose.model("Message", messageSchema);
+const Message = mongoose.model("Message", messageSchema);
+export default Message;
