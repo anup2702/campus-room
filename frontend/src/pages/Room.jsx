@@ -5,8 +5,11 @@ import { io } from "socket.io-client";
 const backendURL =
   import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
 
-// Initialize Socket.IO client
-const socket = io(backendURL, { transports: ["websocket", "polling"] });
+const socket = io(backendURL, {
+  transports: ["polling"], // use polling to avoid wss issues
+  upgrade: true             // Socket.IO will try WebSocket if upgrade works
+});
+
 
 export default function Room({ room, alias }) {
   const [messages, setMessages] = useState([]);
