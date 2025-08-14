@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+
 import { io } from "socket.io-client";
 
 const backendURL =
   import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
 
-const socket = io(backendURL, {
-  transports: ["websocket"], 
-  secure: true
+const socket = io(backendURL);
+
+socket.on("connect", () => {
+  console.log("✅ Connected to backend:", socket.id);
+  
+  socket.emit("test-event", { msg: "Hello from frontend!" });
 });
 
+
+socket.on("test-response", (data) => {
+  console.log("📩 Test response from backend:", data);
+});
 
 
 export default function Room() {
