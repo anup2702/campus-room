@@ -1,6 +1,4 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-
+import React, { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 
 const backendURL =
@@ -8,60 +6,48 @@ const backendURL =
 
 const socket = io(backendURL);
 
-socket.on("connect", () => {
-  console.log("✅ Connected to backend:", socket.id);
-  
-  socket.emit("test-event", { msg: "Hello from frontend!" });
-});
-
-
-socket.on("test-response", (data) => {
-  console.log("📩 Test response from backend:", data);
-});
-
-
 export default function Room() {
-  const { name } = useParams();
   const [messages, setMessages] = useState([]);
-  const [text, setText] = useState("");
+  const [input, setInput] = useState("");
 
   useEffect(() => {
-    socket.emit("join_room", name);
+    socket.on("connect", () => {
+      console.log("✅ Connected to backend:", socket.id);
+    });
 
-    socket.on("load_messages", (msgs) => setMessages(msgs));
-    socket.on("receive_message", (msg) => setMessages((prev) => [...prev, msg]));
+    socket.on("message", (data) => {
+      console.log("📩 Message from backend:", data);
+      setMessages((prev) => [...prev, data]); // Add to UI
+    });
 
+    // cleanup on unmount
     return () => {
-      socket.off("load_messages");
-      socket.off("receive_message");
+      socket.off("message");
     };
-  }, [name]);
+  }, []);
 
   const sendMessage = () => {
-    if (text.trim()) {
-      socket.emit("send_message", { room: name, text });
-      setText("");
+    if (input.trim()) {
+      socket.emit("message", input);
+      setInput("");
     }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-800 text-white">
-      <div className="flex-1 overflow-y-auto p-4">
-        {messages.map((m, i) => (
-          <div key={i} className="mb-2">
-            <span className="font-bold">{m.alias}: </span>{m.text}
-          </div>
+    <div>
+      <h2>Chat Room</h2>
+      <div style={{ border: "1px solid #ccc", padding: "10px" }}>
+        {messages.map((msg, i) => (
+          <p key={i}>{msg}</p>
         ))}
       </div>
-      <div className="p-4 flex">
-        <input
-          className="flex-1 p-2 rounded bg-gray-700"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-        />
-        <button onClick={sendMessage} className="ml-2 px-4 bg-blue-600 rounded">Send</button>
-      </div>
+
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="Type message..."
+      />
+      <button onClick={sendMessage}>Send</button>
     </div>
   );
 }
