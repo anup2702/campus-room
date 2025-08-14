@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
-const backendURL =
-  import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
+// const backendURL =
+//   import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
+const backendURL = "https://campus-room-production.up.railway.app";
 
 export default function Room({ room, alias }) {
   const [messages, setMessages] = useState([]);
