@@ -5,6 +5,9 @@ import { io } from "socket.io-client";
 //   import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
 const backendURL = "https://campus-room-production.up.railway.app";
 
+const socket = io(backendURL);
+
+
 export default function Room({ room, alias }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
