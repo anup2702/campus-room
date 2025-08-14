@@ -1,34 +1,29 @@
 import { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 
-const backendURL =
-  import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
+const backendURL = import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
 const socket = io(backendURL);
 
-export default function Room() {
-  const [messages, setMessages] = useState(() => {
-    // Load saved messages from localStorage on first render
-    const saved = localStorage.getItem("messages");
-    return saved ? JSON.parse(saved) : [];
-  });
+export default function Room({ room, alias }) {
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
 
   useEffect(() => {
-    // Save messages to localStorage whenever they change
-    localStorage.setItem("messages", JSON.stringify(messages));
-  }, [messages]);
+    // Join the room on mount
+    socket.emit("joinRoom", { room, alias });
 
-  useEffect(() => {
-    socket.on("message", (data) => {
-      setMessages((prev) => [...prev, data]);
-    });
+    socket.on("loadMessages", (msgs) => setMessages(msgs));
+    socket.on("message", (msg) => setMessages((prev) => [...prev, msg]));
 
-    return () => socket.off("message");
-  }, []);
+    return () => {
+      socket.off("loadMessages");
+      socket.off("message");
+    };
+  }, [room, alias]);
 
   const sendMessage = () => {
     if (input.trim()) {
-      socket.emit("message", input);
+      socket.emit("sendMessage", { room, alias, text: input });
       setInput("");
     }
   };
@@ -37,7 +32,7 @@ export default function Room() {
     <div>
       <div>
         {messages.map((msg, i) => (
-          <p key={i}>{msg}</p>
+          <p key={i}><strong>{msg.alias}:</strong> {msg.text}</p>
         ))}
       </div>
       <input
