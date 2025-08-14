@@ -3,9 +3,12 @@ import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 
 const backendURL =
-  import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app/";
+  import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
 
-const socket = io(backendURL);
+const socket = io(backendURL, {
+  withCredentials: true,
+});
+
 
 
 export default function Room() {
