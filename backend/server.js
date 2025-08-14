@@ -15,7 +15,16 @@ app.use(cors());
 app.use(express.json());
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, {
+  cors: {
+    origin: [
+      "http://localhost:5173", // dev
+      "https://campus-room.vercel.app/" // prod
+    ],
+    methods: ["GET", "POST"]
+  }
+});
+
 
 io.on("connection", (socket) => {
   const alias = generateAlias();
