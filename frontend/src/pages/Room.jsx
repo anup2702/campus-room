@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 
 const backendURL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000";
+  import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app/";
 
 const socket = io(backendURL);
 
