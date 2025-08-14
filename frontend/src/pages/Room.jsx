@@ -6,7 +6,8 @@ const backendURL =
   import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
 
 const socket = io(backendURL, {
-  withCredentials: true,
+  transports: ["websocket"], 
+  secure: true
 });
 
 
