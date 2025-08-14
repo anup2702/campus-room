@@ -1,21 +1,20 @@
 import { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 
-// Backend URL (Railway or local)
+// Backend URL
 const backendURL =
   import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
 
+// Socket.IO client
 const socket = io(backendURL, {
-  transports: ["polling"], // use polling to avoid wss issues
-  upgrade: true             // Socket.IO will try WebSocket if upgrade works
+  transports: ["polling"], // avoid WebSocket issues
+  upgrade: true
 });
-
 
 export default function Room({ room, alias }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
 
-  // Join the room and listen for messages
   useEffect(() => {
     if (!room || !alias) return;
 
@@ -23,26 +22,18 @@ export default function Room({ room, alias }) {
     socket.emit("joinRoom", { room, alias });
     console.log("Joining room:", room, alias);
 
-    // Load existing messages
-    socket.on("loadMessages", (msgs) => {
-      console.log("Loaded messages:", msgs);
-      setMessages(msgs);
-    });
+    // Load old messages
+    socket.on("loadMessages", (msgs) => setMessages(msgs));
 
-    // Listen for new messages
-    socket.on("message", (msg) => {
-      console.log("New message:", msg);
-      setMessages((prev) => [...prev, msg]);
-    });
+    // New messages
+    socket.on("message", (msg) => setMessages((prev) => [...prev, msg]));
 
-    // Cleanup listeners on unmount
     return () => {
       socket.off("loadMessages");
       socket.off("message");
     };
   }, [room, alias]);
 
-  // Send a new message
   const sendMessage = () => {
     if (input.trim()) {
       socket.emit("sendMessage", { room, alias, text: input });
