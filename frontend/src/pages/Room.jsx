@@ -1,29 +1,29 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 
 const backendURL =
   import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
-
 const socket = io(backendURL);
 
 export default function Room() {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    // Load saved messages from localStorage on first render
+    const saved = localStorage.getItem("messages");
+    return saved ? JSON.parse(saved) : [];
+  });
   const [input, setInput] = useState("");
 
   useEffect(() => {
-    socket.on("connect", () => {
-      console.log("✅ Connected to backend:", socket.id);
-    });
+    // Save messages to localStorage whenever they change
+    localStorage.setItem("messages", JSON.stringify(messages));
+  }, [messages]);
 
+  useEffect(() => {
     socket.on("message", (data) => {
-      console.log("📩 Message from backend:", data);
-      setMessages((prev) => [...prev, data]); // Add to UI
+      setMessages((prev) => [...prev, data]);
     });
 
-    // cleanup on unmount
-    return () => {
-      socket.off("message");
-    };
+    return () => socket.off("message");
   }, []);
 
   const sendMessage = () => {
@@ -35,17 +35,15 @@ export default function Room() {
 
   return (
     <div>
-      <h2>Chat Room</h2>
-      <div style={{ border: "1px solid #ccc", padding: "10px" }}>
+      <div>
         {messages.map((msg, i) => (
           <p key={i}>{msg}</p>
         ))}
       </div>
-
       <input
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        placeholder="Type message..."
+        placeholder="Type a message"
       />
       <button onClick={sendMessage}>Send</button>
     </div>
