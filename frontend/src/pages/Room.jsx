@@ -1,42 +1,55 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
 // Backend URL
 const backendURL =
   import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
 
-// Socket.IO client
-const socket = io(backendURL, {
-  transports: ["polling"], // avoid WebSocket issues
-  upgrade: true
-});
-
 export default function Room({ room, alias }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const socketRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  // Scroll to bottom helper
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
     if (!room || !alias) return;
 
+    // Initialize socket inside useEffect
+    const socket = io(backendURL, {
+      transports: ["polling"],
+      upgrade: true
+    });
+
+    socketRef.current = socket;
+
     // Join room
     socket.emit("joinRoom", { room, alias });
-    console.log("Joining room:", room, alias);
 
     // Load old messages
-    socket.on("loadMessages", (msgs) => setMessages(msgs));
+    socket.on("loadMessages", (msgs) => {
+      setMessages(msgs);
+      scrollToBottom();
+    });
 
-    // New messages
-    socket.on("message", (msg) => setMessages((prev) => [...prev, msg]));
+    // Listen for new messages
+    socket.on("message", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+      scrollToBottom();
+    });
 
     return () => {
-      socket.off("loadMessages");
-      socket.off("message");
+      socket.disconnect();
     };
   }, [room, alias]);
 
   const sendMessage = () => {
     if (input.trim()) {
-      socket.emit("sendMessage", { room, alias, text: input });
+      socketRef.current.emit("sendMessage", { room, alias, text: input });
       setInput("");
     }
   };
@@ -60,6 +73,7 @@ export default function Room({ room, alias }) {
             <strong>{msg.alias}:</strong> {msg.text}
           </p>
         ))}
+        <div ref={messagesEndRef} />
       </div>
       <div style={{ display: "flex", gap: "8px" }}>
         <input
