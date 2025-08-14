@@ -1,46 +1,72 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const http = require("http");
-const { Server } = require("socket.io");
-const connectDB = require("./config/db");
-const Message = require("./models/Message");
-const generateAlias = require("./utils/aliasGenerator");
-const rateLimiter = require("./utils/rateLimiter");
+import express from "express";
+import http from "http";
+import { Server } from "socket.io";
+import mongoose from "mongoose";
+import cors from "cors";
+import dotenv from "dotenv";
+import Message from "./models/Message.js";
 
-connectDB();
+dotenv.config();
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  methods: ["GET", "POST"],
+  credentials: true
+}));
 app.use(express.json());
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL,
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  transports: ["polling"],
+  allowEIO3: true
+});
 
 io.on("connection", (socket) => {
-  const alias = generateAlias();
-  console.log(`🔗 New user connected: ${alias}`);
+  console.log("🟢 Client connected:", socket.id);
 
-  socket.on("join_room", async (room) => {
+  socket.on("joinRoom", async ({ room, alias }) => {
+    if (!room || !alias) return;
+
     socket.join(room);
-    const lastMessages = await Message.find({ room }).sort({ timestamp: 1 }).limit(100);
-    socket.emit("load_messages", lastMessages);
+    console.log(`👤 ${alias} joined room: ${room}`);
+
+    const oldMessages = await Message.find({ room }).sort({ timestamp: 1 });
+    socket.emit("loadMessages", oldMessages.map(msg => msg.toObject()));
   });
 
-  socket.on("send_message", async ({ room, text }) => {
-    if (!rateLimiter(socket.id)) {
-      return socket.emit("error_message", "Rate limit exceeded. Slow down!");
-    }
+  socket.on("sendMessage", async ({ room, alias, text }) => {
+    if (!room || !alias || !text) return;
 
-    const msg = new Message({ room, alias, text });
-    await msg.save();
-    io.to(room).emit("receive_message", msg);
+    const newMsg = new Message({ room, alias, text });
+    await newMsg.save();
+
+    // Emit full message including _id
+    io.to(room).emit("message", newMsg.toObject());
   });
 
   socket.on("disconnect", () => {
-    console.log(`❌ User disconnected: ${alias}`);
+    console.log("🔴 Client disconnected:", socket.id);
   });
 });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.get("/", (req, res) => res.send("Campus Room API is running 🚀"));
+
+const PORT = process.env.PORT || 8080;
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("✅ MongoDB connected");
+    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+  })
+  .catch(err => {
+    console.error("❌ MongoDB connection failed:", err);
+    process.exit(1);
+  });
