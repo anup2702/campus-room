@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
-// Backend URL (Railway or local)
 const backendURL =
   import.meta.env.VITE_API_URL || "https://campus-room-production.up.railway.app";
 
@@ -13,7 +12,6 @@ export default function Room({ room, alias }) {
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Scroll to bottom helper
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -21,33 +19,29 @@ export default function Room({ room, alias }) {
   useEffect(() => {
     if (!room || !alias) return;
 
-    // Initialize socket
     const socket = io(backendURL, {
-      transports: ["polling"], // avoid WebSocket issues on Railway free
+      transports: ["polling"],
       upgrade: true
     });
     socketRef.current = socket;
 
-    // Track connection
     socket.on("connect", () => {
       setConnected(true);
       console.log("Socket connected:", socket.id);
       socket.emit("joinRoom", { room, alias });
     });
 
-    // Load previous messages
     socket.on("loadMessages", (msgs) => {
       setMessages(msgs);
       scrollToBottom();
     });
 
-    // Listen for new messages
     socket.on("message", (msg) => {
+      console.log("Received message:", msg); // Debug log
       setMessages((prev) => [...prev, msg]);
       scrollToBottom();
     });
 
-    // Disconnect cleanup
     return () => {
       socket.disconnect();
       setConnected(false);
@@ -75,7 +69,7 @@ export default function Room({ room, alias }) {
         }}
       >
         {messages.map((msg) => (
-          <p key={msg._id}>
+          <p key={msg._id || `${msg.alias}-${msg.timestamp}`}>
             <strong>{msg.alias}:</strong> {msg.text}
           </p>
         ))}
