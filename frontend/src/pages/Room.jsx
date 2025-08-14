@@ -23,7 +23,7 @@ export default function Room({ room, alias }) {
 
     // Initialize socket
     const socket = io(backendURL, {
-      transports: ["polling"], // avoid wss issues on Railway free
+      transports: ["polling"], // avoid WebSocket issues on Railway free
       upgrade: true
     });
     socketRef.current = socket;
@@ -89,7 +89,6 @@ export default function Room({ room, alias }) {
           onChange={(e) => setInput(e.target.value)}
           placeholder={connected ? "Type a message" : "Connecting..."}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          disabled={!connected}
         />
         <button
           onClick={sendMessage}
