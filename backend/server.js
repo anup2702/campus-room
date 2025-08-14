@@ -10,15 +10,13 @@ dotenv.config();
 
 const app = express();
 
-// CORS for Express
 app.use(cors({
-  origin: process.env.FRONTEND_URL, // Vercel frontend URL
+  origin: process.env.FRONTEND_URL,
   methods: ["GET", "POST"],
   credentials: true
 }));
 app.use(express.json());
 
-// MongoDB connection
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -28,42 +26,37 @@ mongoose.connect(process.env.MONGO_URI, {
 
 const server = http.createServer(app);
 
-// Socket.IO server
 const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL,
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ["polling"], // avoid WebSocket issues on Railway free
+  transports: ["polling"],
   allowEIO3: true
 });
 
-// Socket.IO logic
 io.on("connection", (socket) => {
   console.log("🟢 Client connected:", socket.id);
 
-  // Join a room
   socket.on("joinRoom", async ({ room, alias }) => {
     if (!room || !alias) return;
 
     socket.join(room);
     console.log(`👤 ${alias} joined room: ${room}`);
 
-    // Send old messages in this room
     const oldMessages = await Message.find({ room }).sort({ timestamp: 1 });
-    socket.emit("loadMessages", oldMessages.map(msg => msg.toObject())); // <-- convert to plain objects
+    socket.emit("loadMessages", oldMessages.map(msg => msg.toObject()));
   });
 
-  // Send message
   socket.on("sendMessage", async ({ room, alias, text }) => {
     if (!room || !alias || !text) return;
 
     const newMsg = new Message({ room, alias, text });
     await newMsg.save();
 
-    // Broadcast to room
-    io.to(room).emit("message", newMsg.toObject()); // <-- convert to plain object
+    // Emit full message including _id
+    io.to(room).emit("message", newMsg.toObject());
   });
 
   socket.on("disconnect", () => {
@@ -71,7 +64,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// Test route
 app.get("/", (req, res) => res.send("Campus Room API is running 🚀"));
 
 const PORT = process.env.PORT || 8080;
