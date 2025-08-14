@@ -35,12 +35,19 @@ const io = new Server(server, {
 });
 
 io.on("connection", (socket) => {
-  console.log("🟢 New client connected:", socket.id);
+  console.log("🟢 Client connected:", socket.id);
+
+  // Test event listener
+  socket.on("test-event", (msg) => {
+    console.log("📩 Received from client:", msg);
+    socket.emit("test-response", `Server got: ${msg}`);
+  });
 
   socket.on("disconnect", () => {
     console.log("🔴 Client disconnected:", socket.id);
   });
 });
+
 
 // Routes test
 app.get("/", (req, res) => {
