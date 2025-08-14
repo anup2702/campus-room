@@ -37,6 +37,11 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("🟢 Client connected:", socket.id);
 
+  socket.on("message", (data) => {
+  console.log("📩 Message from client:", data);
+  io.emit("message", data); // Send to all clients
+});
+
   // Test event listener
   socket.on("test-event", (msg) => {
     console.log("📩 Received from client:", msg);
