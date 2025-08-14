@@ -1,55 +1,54 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const http = require("http");
-const { Server } = require("socket.io");
-const connectDB = require("./config/db");
-const Message = require("./models/Message");
-const generateAlias = require("./utils/aliasGenerator");
-const rateLimiter = require("./utils/rateLimiter");
+import express from "express";
+import http from "http";
+import { Server } from "socket.io";
+import mongoose from "mongoose";
+import cors from "cors";
+import dotenv from "dotenv";
 
-connectDB();
+dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL, // Vercel URL
+  methods: ["GET", "POST"],
+  credentials: true
+}));
 app.use(express.json());
 
+// MongoDB connect
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => console.log("✅ MongoDB connected"))
+  .catch(err => console.error("❌ MongoDB connection failed:", err));
+
+// Create server
 const server = http.createServer(app);
+
+// Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:5173", // dev
-      "https://campus-room.vercel.app/" // prod
-    ],
-    methods: ["GET", "POST"]
+    origin: process.env.FRONTEND_URL,
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
-
 io.on("connection", (socket) => {
-  const alias = generateAlias();
-  console.log(`🔗 New user connected: ${alias}`);
-
-  socket.on("join_room", async (room) => {
-    socket.join(room);
-    const lastMessages = await Message.find({ room }).sort({ timestamp: 1 }).limit(100);
-    socket.emit("load_messages", lastMessages);
-  });
-
-  socket.on("send_message", async ({ room, text }) => {
-    if (!rateLimiter(socket.id)) {
-      return socket.emit("error_message", "Rate limit exceeded. Slow down!");
-    }
-
-    const msg = new Message({ room, alias, text });
-    await msg.save();
-    io.to(room).emit("receive_message", msg);
-  });
+  console.log("🟢 New client connected:", socket.id);
 
   socket.on("disconnect", () => {
-    console.log(`❌ User disconnected: ${alias}`);
+    console.log("🔴 Client disconnected:", socket.id);
   });
 });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// Routes test
+app.get("/", (req, res) => {
+  res.send("Campus Room API is running 🚀");
+});
+
+// Listen on Railway port
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
