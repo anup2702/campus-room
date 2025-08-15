@@ -5,6 +5,8 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import Message from "./models/Message.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
@@ -36,8 +38,8 @@ io.on("connection", (socket) => {
     socket.join(room);
     console.log(`👤 ${alias} joined room: ${room}`);
 
-    const oldMessages = await Message.find({ room }).sort({ timestamp: 1 });
-    socket.emit("loadMessages", oldMessages.map(msg => msg.toObject()));
+    const oldMessages = await Message.find({ room }).sort({ timestamp: -1 }).limit(200);
+    socket.emit("loadMessages", oldMessages.reverse().map(msg => msg.toObject()));
   });
 
   socket.on("sendMessage", async ({ room, alias, text }) => {
@@ -53,6 +55,18 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log("🔴 Client disconnected:", socket.id);
   });
+});
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
 });
 
 app.get("/", (req, res) => {
