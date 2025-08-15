@@ -63,15 +63,15 @@ const __dirname = path.dirname(__filename);
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
+app.get("/", (req, res) => {
+  console.log("ℹ️ Health check endpoint hit");
+  res.status(200).send("Campus Room API is running 🚀");
+});
+
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
-});
-
-app.get("/", (req, res) => {
-  console.log("ℹ️ Health check endpoint hit");
-  res.status(200).send("Campus Room API is running 🚀");
 });
 
 const PORT = process.env.PORT || 8080;
