@@ -34,6 +34,8 @@ export default function Room({ room, alias }) {
     });
 
     socket.on("message", (msg) => {
+            console.log("New message received:", msg);
+
       setMessages((prev) => [...prev, msg]);
       scrollToBottom();
     });
