@@ -3,9 +3,6 @@ import { io } from "socket.io-client";
 
 const backendURL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-const socket = io(backendURL);
-
-
 export default function Room({ room, alias }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -20,17 +17,15 @@ export default function Room({ room, alias }) {
   };
 
   useEffect(() => {
-    if (!room || !alias) return;
-
+    // Create and connect the socket
     const socket = io(backendURL, {
       transports: ["polling"],
-      upgrade: true
+      upgrade: true,
     });
     socketRef.current = socket;
 
     socket.on("connect", () => {
       console.log("✅ Connected:", socket.id);
-      socket.emit("joinRoom", { room, alias });
     });
 
     socket.on("loadMessages", (msgs) => {
@@ -47,10 +42,18 @@ export default function Room({ room, alias }) {
       console.log("🔌 Disconnected");
     });
 
+    // Disconnect on component unmount
     return () => {
       socket.disconnect();
     };
-  }, [room, alias]);
+  }, []); // Empty dependency array ensures this runs only once
+
+  useEffect(() => {
+    // Join room when socket is connected and room/alias are available
+    if (socketRef.current && room && alias) {
+      socketRef.current.emit("joinRoom", { room, alias });
+    }
+  }, [room, alias]); // Re-run when room or alias changes
 
   useEffect(() => {
     inputRef.current?.focus();

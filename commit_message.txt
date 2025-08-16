@@ -1,0 +1,5 @@
+fix: Add CORS configuration to Socket.IO server
+
+Configured the Socket.IO server to include CORS headers,
+allowing connections from the frontend application. This
+resolves the "Access-Control-Allow-Origin" error.
